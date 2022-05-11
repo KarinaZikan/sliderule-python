@@ -1552,6 +1552,7 @@ basemaps = _load_dict(providers)
 class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
+        kwargs.setdefault('map',None)
         kwargs.setdefault('attribution',False)
         kwargs.setdefault('zoom_control',False)
         kwargs.setdefault('scale_control',False)
@@ -1581,6 +1582,10 @@ class leaflet:
                 basemap=basemaps.Esri.AntarcticBasemap,
                 crs=projections.EPSG3031.Basemap)
             self.crs = 'EPSG:3031'
+        else:
+            # use a predefined ipyleaflet map
+            self.map = kwargs['map']
+            self.crs = self.map.crs['name']
         # add control for layers
         if kwargs['layer_control']:
             self.layer_control = ipyleaflet.LayersControl(position='topleft')
