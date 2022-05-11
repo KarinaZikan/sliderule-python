@@ -250,7 +250,7 @@ class widgets:
 
         # slider for setting for YAPC along-track distance window
         self.yapc_win_x = ipywidgets.FloatSlider(
-            value=21.0,
+            value=15.0,
             min=0.1,
             max=100,
             step=0.1,
@@ -506,8 +506,20 @@ class widgets:
             style=self.style,
         )
 
+        # selection for adding raster functions to map
+        self.raster_functions = ipywidgets.SelectMultiple(
+            options=[],
+            description='Add Rasters:',
+            description_tooltip=("Add Raster: contextual raster "
+                "functions to add to leaflet map"),
+            disabled=False,
+            style=self.style,
+        )
+        self.raster_functions.layout.display = 'none'
+
         # watch widgets for changes
         self.projection.observe(self.set_layers)
+        self.layers.observe(self.set_raster_functions)
 
         # single plot widgets
         # single plot kind
@@ -715,9 +727,40 @@ class widgets:
         elif (self.projection.value == 'North'):
             layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
-            layer_options = ['LIMA','MOA','RAMP']
+            layer_options = ['LIMA','MOA','RAMP','REMA']
         self.layers.options=layer_options
         self.layers.value=[]
+
+    # function for setting available raster functions
+    def set_raster_functions(self, sender):
+        # available raster functions for each DEM
+        if ('ArcticDEM' in self.layers.value):
+            raster_functions = [
+                "Aspect Map",
+                "Hillshade Elevation Tinted",
+                "Hillshade Gray",
+                "Height Ellipsoidal",
+                "Height Orthometric",
+                "Slope Map",
+                "Contour 25",
+                "Contour Smoothed 25"]
+            self.raster_functions.layout.display = 'inline-flex'
+        elif ('REMA' in self.layers.value):
+            raster_functions = [
+                "Aspect Map",
+                "Hillshade Elevation Tinted",
+                "Hillshade Gray",
+                "Height Orthometric",
+                "Slope Degrees Map",
+                "Contour 25",
+                "Smooth Contour 25"]
+            self.raster_functions.layout.display = 'inline-flex'
+        else:
+            raster_functions = []
+            self.raster_functions.layout.display = 'none'
+        # set options for raster functions
+        self.raster_functions.options=raster_functions
+        self.raster_functions.value=[]
 
     # function for setting single track plot kind
     def set_plot_kind(self, sender):
@@ -1467,14 +1510,21 @@ layers = Bunch(
         )
     ),
     PGC = Bunch(
-        ArcticDEM = ipyleaflet.WMSLayer(
+        ArcticDEM = ipyleaflet.ImageServiceLayer(
             name="ArcticDEM",
             attribution=pgc_attribution,
-            layers="0",
-            format='image/png',
+            format='jpgpng',
             transparent=True,
-            url='http://elevation2.arcgis.com/arcgis/services/Polar/ArcticDEM/ImageServer/WMSserver',
+            url='https://elevation2.arcgis.com/arcgis/rest/services/Polar/ArcticDEM/ImageServer',
             crs=projections.EPSG5936.ArcticDEM
+        ),
+        REMA = ipyleaflet.ImageServiceLayer(
+            name="REMA",
+            attribution=pgc_attribution,
+            format='jpgpng',
+            transparent=True,
+            url='https://elevation2.arcgis.com/arcgis/rest/services/Polar/AntarcticDEM/ImageServer',
+            crs=projections.EPSG3031.Basemap
         )
     )
 )
@@ -1606,9 +1656,13 @@ class leaflet:
         """wrapper function for adding selected layers to leaflet maps
         """
         kwargs.setdefault('layers', [])
+        kwargs.setdefault('raster_functions', [])
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
             kwargs['layers'] = [kwargs['layers']]
+        # verify raster functions are iterable
+        if isinstance(kwargs['raster_functions'],str):
+            kwargs['raster_functions'] = [kwargs['raster_functions']]
         # add each layer to map
         for layer in kwargs['layers']:
             # try to add the layer
@@ -1628,13 +1682,23 @@ class leaflet:
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.add_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
-                    self.map.add_layer(layers.PGC.ArcticDEM)
+                    for raster_function in kwargs['raster_functions']:
+                        im = copy.copy(layers.PGC.ArcticDEM)
+                        im.name += ':{0}'.format(raster_function)
+                        im.rendering_rule = {"rasterFunction": raster_function}
+                        self.map.add_layer(im)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
                     self.map.add_layer(layers.USGS.LIMA)
                 elif isinstance(layer,str) and (layer == 'MOA'):
                     self.map.add_layer(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.add_layer(layers.USGS.RAMP)
+                elif isinstance(layer,str) and (layer == 'REMA'):
+                    for raster_function in kwargs['raster_functions']:
+                        im = copy.copy(layers.PGC.REMA)
+                        im.name += ':{0}'.format(raster_function)
+                        im.rendering_rule = {"rasterFunction": raster_function}
+                        self.map.add_layer(im)
             except ipyleaflet.LayerException as e:
                 logging.info(f"Layer {layer} already on map")
                 pass
@@ -1666,13 +1730,23 @@ class leaflet:
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
-                    self.map.remove_layer(layers.PGC.ArcticDEM)
+                    for raster_function in kwargs['raster_functions']:
+                        im = copy.copy(layers.PGC.ArcticDEM)
+                        im.name += ':{0}'.format(raster_function)
+                        im.rendering_rule = {"rasterFunction": raster_function}
+                        self.map.remove_layer(im)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
                     self.map.remove_layer(layers.USGS.LIMA)
                 elif isinstance(layer,str) and (layer == 'MOA'):
                     self.map.remove_layer(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.remove_layer(layers.USGS.RAMP)
+                elif isinstance(layer,str) and (layer == 'REMA'):
+                    for raster_function in kwargs['raster_functions']:
+                        im = copy.copy(layers.PGC.REMA)
+                        im.name += ':{0}'.format(raster_function)
+                        im.rendering_rule = {"rasterFunction": raster_function}
+                        self.map.remove_layer(im)
             except Exception as e:
                 logging.critical(f"Could not remove layer {layer}")
                 logging.error(traceback.format_exc())
