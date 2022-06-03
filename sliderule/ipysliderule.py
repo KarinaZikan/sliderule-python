@@ -733,6 +733,8 @@ class widgets:
 
     # function for setting available raster functions
     def set_raster_functions(self, sender):
+        """sets available raster functions for image service layers
+        """
         # available raster functions for each DEM
         if ('ArcticDEM' in self.layers.value):
             raster_functions = [
@@ -761,6 +763,15 @@ class widgets:
         # set options for raster functions
         self.raster_functions.options=raster_functions
         self.raster_functions.value=[]
+
+    @property
+    def rendering_rules(self):
+        """sets rendering rules from raster functions
+        """
+        rendering_rule = []
+        for raster_function in self.raster_functions.value:
+            rendering_rule.append({"rasterFunction": raster_function})
+        return rendering_rule
 
     # function for setting single track plot kind
     def set_plot_kind(self, sender):
@@ -1661,7 +1672,7 @@ class leaflet:
         """wrapper function for adding selected layers to leaflet maps
         """
         kwargs.setdefault('layers', [])
-        kwargs.setdefault('raster_functions', [])
+        kwargs.setdefault('rendering_rules', [])
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
             kwargs['layers'] = [kwargs['layers']]
@@ -1687,10 +1698,10 @@ class leaflet:
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.add_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
-                    for raster_function in kwargs['raster_functions']:
+                    for rendering_rule in kwargs['rendering_rules']:
                         im = copy.copy(layers.PGC.ArcticDEM)
-                        im.name += ':{0}'.format(raster_function)
-                        im.rendering_rule = {"rasterFunction": raster_function}
+                        im.name += ':{0}'.format(rendering_rule["rasterFunction"])
+                        im.rendering_rule = copy.copy(rendering_rule)
                         self.map.add_layer(im)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
                     self.map.add_layer(layers.USGS.LIMA)
@@ -1699,10 +1710,10 @@ class leaflet:
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.add_layer(layers.USGS.RAMP)
                 elif isinstance(layer,str) and (layer == 'REMA'):
-                    for raster_function in kwargs['raster_functions']:
+                    for rendering_rule in kwargs['rendering_rules']:
                         im = copy.copy(layers.PGC.REMA)
-                        im.name += ':{0}'.format(raster_function)
-                        im.rendering_rule = {"rasterFunction": raster_function}
+                        im.name += ':{0}'.format(rendering_rule["rasterFunction"])
+                        im.rendering_rule = copy.copy(rendering_rule)
                         self.map.add_layer(im)
             except ipyleaflet.LayerException as e:
                 logging.info(f"Layer {layer} already on map")
@@ -1713,6 +1724,7 @@ class leaflet:
         """wrapper function for removing selected layers from leaflet maps
         """
         kwargs.setdefault('layers', [])
+        kwargs.setdefault('rendering_rules', [])
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
             kwargs['layers'] = [kwargs['layers']]
@@ -1735,10 +1747,10 @@ class leaflet:
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
-                    for raster_function in kwargs['raster_functions']:
+                    for rendering_rule in kwargs['rendering_rules']:
                         im = copy.copy(layers.PGC.ArcticDEM)
-                        im.name += ':{0}'.format(raster_function)
-                        im.rendering_rule = {"rasterFunction": raster_function}
+                        im.name += ':{0}'.format(rendering_rule["rasterFunction"])
+                        im.rendering_rule = copy.copy(rendering_rule)
                         self.map.remove_layer(im)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
                     self.map.remove_layer(layers.USGS.LIMA)
@@ -1747,10 +1759,10 @@ class leaflet:
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.remove_layer(layers.USGS.RAMP)
                 elif isinstance(layer,str) and (layer == 'REMA'):
-                    for raster_function in kwargs['raster_functions']:
+                    for rendering_rule in kwargs['rendering_rules']:
                         im = copy.copy(layers.PGC.REMA)
-                        im.name += ':{0}'.format(raster_function)
-                        im.rendering_rule = {"rasterFunction": raster_function}
+                        im.name += ':{0}'.format(rendering_rule["rasterFunction"])
+                        im.rendering_rule = copy.copy(rendering_rule)
                         self.map.remove_layer(im)
             except Exception as e:
                 logging.critical(f"Could not remove layer {layer}")
