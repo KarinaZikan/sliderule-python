@@ -418,7 +418,7 @@ class widgets:
             style=self.style,
         )
 
-        # dropdown menu for setting map projection for polygons
+        # dropdown menu for setting map projection
         # Global: Web Mercator (EPSG:3857)
         # North: Alaska Polar Stereographic (EPSG:5936)
         # South: Polar Stereographic South (EPSG:3031)
@@ -1552,7 +1552,7 @@ layers = Bunch(
         )
     ),
     PGC = Bunch(
-        ArcticDEM = ipyleaflet.ImageServiceLayer(
+        ArcticDEM = ipyleaflet.ImageService(
             name="ArcticDEM",
             attribution=pgc_attribution,
             format='jpgpng',
@@ -1560,7 +1560,7 @@ layers = Bunch(
             url='https://elevation2.arcgis.com/arcgis/rest/services/Polar/ArcticDEM/ImageServer',
             crs=projections.EPSG5936.ArcticDEM
         ),
-        REMA = ipyleaflet.ImageServiceLayer(
+        REMA = ipyleaflet.ImageService(
             name="REMA",
             attribution=pgc_attribution,
             format='jpgpng',
